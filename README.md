@@ -1,5 +1,52 @@
 # Camera Movement Detection - 알고리즘 설명서
 
+아래 두 그림은 이 저장소에서 비교한 알고리즘들의 대표 결과입니다 — 왼쪽은 프레임별 속도 시계열을 여러 알고리즘으로 겹쳐 그린 `velocities_combined.png`, 오른쪽은 각 알고리즘의 실행시간을 비교한 `runtimes.png`입니다.
+
+![Combined velocities](test_script/velocities_combined.png)
+
+![Runtimes](test_script/runtimes.png)
+
+이 저장소에는 영상 기반의 카메라/장면 내 움직임(속도) 탐지를 위한 여러 알고리즘이 포함되어 있습니다. 여기서는 네 가지 알고리즘(프레임 차분, 특징점 기반 광류, 격자 기반 광류, Farneback dense)의 동작 원리, 구현 포인트, 장단점 및 사용 예시를 설명합니다.
+
+---
+
+## 1) 원본 알고리즘: Farneback (Dense Optical Flow) 기반 ROI 평균
+설명:
+- 입력: `prev_gray`, `curr_gray` (그레이스케일 전후 프레임), `roi_mask` (ROI 영역을 나타내는 0/1 바이너리 마스크)
+- 내부 동작: Farneback 알고리즘으로 각 픽셀의 흐름 벡터(flow)를 구한 뒤, x/y 성분으로부터 크기(magnitude)를 계산합니다. ROI 마스크로 크기를 마스킹한 후 ROI 내부 픽셀들의 평균을 반환하여 '움직임 정도'를 산출합니다.
+
+대표 함수 (개념 코드):
+
+```python
+def compute_optical_flow_with_mask(prev_gray, curr_gray, roi_mask):
+  """Farneback 광류 → 크기(magnitude)의 ROI 평균값으로 움직임 정도 산출"""
+  flow = cv2.calcOpticalFlowFarneback(
+    prev_gray, curr_gray, None,
+    pyr_scale=0.5, levels=1, winsize=9,
+    iterations=1, poly_n=3, poly_sigma=0.9, flags=0
+  )
+  mag, _ = cv2.cartToPolar(flow[..., 0], flow[..., 1])
+  # roi_mask는 0/1 바이너리여야 평균이 정확함
+  masked_mag = mag * roi_mask
+  mean_movement = np.sum(masked_mag) / (np.sum(roi_mask) + 1e-6)
+  return mean_movement
+```
+```python
+def compute_optical_flow_with_mask(prev_gray, curr_gray, roi_mask):
+  """Farneback 광류 → 크기(magnitude)의 ROI 평균값으로 움직임 정도 산출"""
+  flow = cv2.calcOpticalFlowFarneback(
+    prev_gray, curr_gray, None,
+    pyr_scale=0.5, levels=1, winsize=9,
+    iterations=1, poly_n=3, poly_sigma=0.9, flags=0
+  )
+  mag, _ = cv2.cartToPolar(flow[..., 0], flow[..., 1])
+  # roi_mask는 0/1 바이너리여야 평균이 정확함
+  masked_mag = mag * roi_mask
+  mean_movement = np.sum(masked_mag) / (np.sum(roi_mask) + 1e-6)
+  return mean_movement
+```
+# Camera Movement Detection - 알고리즘 설명서
+
 이 저장소에는 영상 기반의 카메라/장면 내 움직임(속도) 탐지를 위한 여러 알고리즘이 포함되어 있습니다. 여기서는 네 가지 알고리즘(프레임 차분, 특징점 기반 광류, 격자 기반 광류, Farneback dense)의 동작 원리, 구현 포인트, 장단점 및 사용 예시를 설명합니다.
 
 ---
@@ -106,9 +153,6 @@ mean_disp = np.mean(displacements_in_roi)
 ## 7) 요약 (한줄)
 - 주어진 `compute_optical_flow_with_mask` (Farneback dense magnitude ROI 평균)은 올바른 '움직임 크기' 측정 방식이며, 제안된 특징점 기반(스파스) 광류 분석 또한 타당합니다. 둘은 서로 보완적이므로 실험적으로 비교하여 상황에 맞는 방법을 선택하세요.
 
----
-
-필요하면, 이 README에 Farneback 구현을 `utils/algorithms.py`에 포함시키거나, `test_script`에 Farneback을 추가해 비교 스위트로 확장해 드리겠습니다.
 
 ## 8) 저장소에 포함된 구현(요약)
 
@@ -163,15 +207,5 @@ PYTHONPATH=$(pwd) python3 test_script/run_comparison.py
 - 이상치 처리: 프레임별 중앙값(`median`) 또는 상·하위 컷(cut)을 사용해 이상치 영향을 줄이세요.
 - 시간 대비 정확도: `runtimes.png`와 `velocities_combined.png`를 함께 보며 어떤 알고리즘이 현실적 제약(실시간, 배치 처리)에 더 적합한지 판단하세요.
 
----
 
-## 12) 커밋/업로드 가이드
 
-- 포함 권장: `test_script/velocities_combined.png`, `test_script/runtimes.png`, 그리고 각 개별 `velocities_<method>.png` 파일.
-- README에 위 파일들(또는 대표링크)을 첨부하고, `config.yaml`에 사용한 파라미터(`resize_scale`, `farneback` params, `optical_flow` params 등)를 명시하세요.
-
----
-
-필요하면 제가 `README.md`에 예시 캡처(작은 미리보기 이미지 포함)나 `results/` 폴더 구조로 저장·정리하는 스크립트를 추가해 드립니다.
-
-<!-- Duplicate/legacy section removed: implementations and next-steps are documented above. -->

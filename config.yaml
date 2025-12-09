@@ -1,0 +1,58 @@
+# config.yaml
+
+# ==========================================
+# 1. 공통 설정 (ROI, 리사이즈 등)
+# ==========================================
+common:
+  roi:
+    bottom_x1_ratio: 0.3
+    bottom_x2_ratio: 0.7
+    top_x1_ratio: 0.45
+    top_x2_ratio: 0.55
+    top_y_ratio: 0.6
+
+# ==========================================
+# 2. Optical Flow (Grid 방식) 설정
+# ==========================================
+optical_flow:
+  method: "grid"        # 'grid' or 'sparse' (확장성을 위해 명시)
+  resize_scale: 0.5     # 분석 해상도 스케일 (0.5 = 절반 크기)
+  grid_step: 80         # 격자 간격 (작을수록 정밀, 클수록 빠름)
+  reset_thresh: 0.5     # 점이 30% 미만으로 남으면 재설정
+  
+
+  redetect_interval: 15  # 프레임마다 재탐지 간격 (15 프레임마다)
+# cv2.goodFeaturesToTrack 파라미터 (원래 메소드 파라미터)
+  feature_params:
+    maxCorners: 200      # 최대 추적 점 개수 (너무 많으면 느려짐, 100~200 추천)
+    qualityLevel: 0.2    # 코너 품질 (0.01~0.1 추천, 0.3은 꽤 엄격함)
+    minDistance: 7       # 점 사이 최소 거리
+    blockSize: 7
+  lk_params:
+    win_size: [15, 15]
+    max_level: 2
+    criteria:
+      max_count: 10
+      epsilon: 0.03
+
+# ==========================================
+# 3. Farneback 설정
+# ==========================================
+farneback:
+  resize_scale: 0.3     # Farneback은 무거우므로 더 작게(0.3) 설정 추천
+  
+  # cv2.calcOpticalFlowFarneback 파라미터
+  pyr_scale: 0.5        # 피라미드 스케일 (0.5 = 고전적)
+  levels: 1             # 피라미드 레벨 (낮을수록 빠름)
+  winsize: 9            # 윈도우 크기 (노이즈에 영향)
+  iterations: 1         # 반복 횟수 (1 = 빠름, 3+ = 정확)
+  poly_n: 3             # 픽셀 이웃 크기 (5나 7 추천, 3은 빠름)
+  poly_sigma: 0.9       # 가우시안 표준편차 (poly_n에 따라 조정: n=5->1.1, n=7->1.5)
+  flags: 0
+
+# ==========================================
+# 4. Diff (차분) 설정
+# ==========================================
+diff:
+  blur_ksize: [21, 21]
+  threshold: 25
